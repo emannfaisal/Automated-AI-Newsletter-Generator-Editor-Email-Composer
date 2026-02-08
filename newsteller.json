@@ -1,0 +1,460 @@
+{
+  "name": "newsteller",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -896,
+        -208
+      ],
+      "id": "68b6faaa-e606-4720-9e7f-f0a06dc2dac7",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "query": "AI adoption in small businesses",
+        "options": {
+          "topic": "news",
+          "max_results": 3,
+          "time_range": "week"
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -208
+      ],
+      "id": "8b4aa6d9-c166-4fe9-be08-765f8c6e49d9",
+      "name": "Search",
+      "credentials": {
+        "tavilyApi": {
+          "id": "m7Ej4O8c4tjjSrKo",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        64
+      ],
+      "id": "28602592-21f7-4eb3-91ec-a66be4bc0516",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "W2N6KokmlqOdDHCn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"title\": { \"type\": \"string\", \"minLength\": 10 },\n    \"topics\": {\n      \"type\": \"array\",\n      \"minItems\": 3,\n      \"maxItems\": 3,\n      \"items\": { \"type\": \"string\", \"minLength\": 3, \"maxLength\": 50 }\n    }\n  },\n  \"required\": [\"title\", \"topics\"]\n}\n\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -448,
+        48
+      ],
+      "id": "5a00ade1-9bf3-4638-a1f0-f2da4f07c181",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.topics",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -192
+      ],
+      "id": "8fff2d0e-1c6d-4ced-ad41-0832af6932ab",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "query": "={{ $json['output.topics'] }}",
+        "options": {
+          "topic": "general",
+          "time_range": "month",
+          "include_raw_content": true
+        }
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -192
+      ],
+      "id": "b3afd7df-329c-467a-bf8c-166e9ca5b68d",
+      "name": "Search1",
+      "credentials": {
+        "tavilyApi": {
+          "id": "m7Ej4O8c4tjjSrKo",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query }}\nUse these sources to write one standalone section:\n\n{{ $json.results.map(item => JSON.stringify(item,null,2)).join(\"\\n\\n\") }}\n",
+        "options": {
+          "systemMessage": "You are a professional newsletter section writer. Write ONE self-contained section (350–500 words) for small-business leaders.\n\nRequirements:\n- Start with an H2 heading matching the Topic (e.g., “## <topic>”).\n- Synthesize facts from the provided sources (don’t invent).\n- Inline-cite claims with superscript markers like [1], [2].\n- After the prose, add a short “Sources” list: [n] Title — Domain (linked).\n- Tone: clear, expert, engaging. No overall intro or conclusion; just this section.\n- Output plain Markdown (the editor will convert to HTML).\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        16,
+        -192
+      ],
+      "id": "5fa1c3aa-78e4-478f-b54f-592219ee3816",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        112,
+        128
+      ],
+      "id": "1c70a6b0-5538-4e66-b249-1b1f0f78d430",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "W2N6KokmlqOdDHCn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        288,
+        -192
+      ],
+      "id": "2b6423de-74a1-4d42-8637-29943cac06fe",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.results.map(item => JSON.stringify(item, null, 2)).join(\"\\n\\n\") }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert newsletter planner. You receive 3–5 short article digests (title, URL, published date, content) from the past week.\n\nTask: \npropose a catchy edition title (≤ 80 chars) and exactly 3 concise topics (each 3–5 words) that reflect distinct angles for our audience of small-business leaders.\n\nConstraints: unique topics; no duplicates; no clickbait; be informative.\nOutput only via the required schema (no extra text).\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -560,
+        -224
+      ],
+      "id": "1eb10a00-cee6-49c3-ac97-9ecda7a39f81",
+      "name": "Planner"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Title: {{ $('Planner').item.json.output.title }}\n\nSections: \n{{ $json.output.join(\"\\n\\n\\n\\n\") }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the newsletter editor and layout stylist.\n\n**Input:** one title candidate and 3 Markdown sections with [n] footnotes.\n\n**Output:**\n1. **subject** — an email subject (≤ 80 chars, no emojis).\n2. **content** — a VALID, responsive HTML **body only** (no `<!DOCTYPE>`, `<html>`, or `<head>`).\n\n\n**HTML Requirements:**\n* Structure: include a header with the title + current date {{ $now.format(\"DDD\") }}, a short intro paragraph, the 3 sections (convert Markdown to HTML), a “Key Sources” section that deduplicates and numbers links, and a short friendly sign-off.\n* Typography: use `<h1>/<h2>`, `<p>`, `<ul>/<ol>`, `<a>`. Apply inline CSS for readability (max-width container, readable font size and line-height).\n* Links: anchors must include `rel=\"noopener noreferrer\"` and `target=\"_blank\"`.\n* Accessibility: semantic headings; include `alt` text if images appear (don’t invent images).\n* Restrictions: no external CSS/JS, no tracking pixels.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        -192
+      ],
+      "id": "5db2fedc-5a9b-41e8-a885-ef86dee0e559",
+      "name": "Editor"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        336,
+        48
+      ],
+      "id": "53e83494-c2f1-4c1a-bb1b-b0876dac1535",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "W2N6KokmlqOdDHCn",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        688,
+        0
+      ],
+      "id": "b7b70cf3-9c04-437e-bd0b-a06720a57e2a",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json.output}}",
+        "emailType": "html",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        784,
+        -192
+      ],
+      "id": "20fa1349-109e-440d-a2bc-603c40bffcaf",
+      "name": "Create a draft",
+      "webhookId": "903f3a3d-4986-44e0-a2ab-43489f0b4acf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xOQrTKcPFLjqrsga",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Search": [
+      {
+        "json": {
+          "query": "AI adoption in small businesses",
+          "follow_up_questions": null,
+          "answer": null,
+          "images": [],
+          "results": [
+            {
+              "url": "https://www.forbes.com/sites/kolawolesamueladebayo/2025/10/22/the-new-shopify-moment-for-ai-services/",
+              "title": "The New Shopify Moment For AI Services - Forbes",
+              "score": 0.8559598,
+              "published_date": "Wed, 22 Oct 2025 08:40:29 GMT",
+              "content": "“Most business owners don’t wake up thinking about AI,” explained Jordan Lee, founder of Acquisition AI, a company that builds automation tools for small firms. His point, essentially, is that the next phase of AI adoption will be about who makes it usable for the people running real businesses — something that’s increasingly becoming the major message across the AI industry. “We’re living through what feels like a Shopify moment for AI services,” Lee said. The companies that break that barrier, building an ecosystem where others can create, customize and scale their own AI services — much like Shopify did for online stores — will redefine how small businesses grow.” If Lee is right, the true democratization of AI won’t come from the labs building smarter models, but from the entrepreneurs making those models usable.",
+              "raw_content": null
+            },
+            {
+              "url": "https://www.ecommercetimes.com/story/smbs-investing-more-in-marketing-still-guessing-what-works-178410.html",
+              "title": "SMBs Investing More in Marketing, Still Guessing What Works - E-Commerce Times",
+              "score": 0.7608822,
+              "published_date": "Fri, 24 Oct 2025 13:00:22 GMT",
+              "content": "Despite increased marketing budgets and the broader adoption of tools such as email marketing, AI, and video, only 18% of SMBs — down from 27% in 2024 — feel very confident in the effectiveness of their marketing. SMBs who use AI report stronger performance in email, paid social, and search marketing. Vella explained that Constant Contact’s e-commerce platform provides intuitive AI tools that act as an assistant, not a replacement, for marketing strategies. It helps SMBs write first drafts for emails and social posts — the top use case for AI — using clear insights and real-time data. As a starting point, even without a platform, SMBs can use AI for email marketing assistance. https://www.ecommercetimes.com/story/ai-tool-from-technomile-helps-smbs-win-government-contracts-177470.html https://www.ecommercetimes.com/wp-content/uploads/sites/5/2023/12/cloud-ai.jpg https://www.ecommercetimes.com/story/scroll-click-buy-how-deals-data-and-dialogue-power-social-commerce-178311.html https://www.ecommercetimes.com/wp-content/uploads/sites/5/2025/08/Agentic-AI-shopping.jpg https://www.ecommercetimes.com/story/new-trust-platform-features-help-retailers-manage-agentic-ai-risks-178338.html",
+              "raw_content": null
+            },
+            {
+              "url": "https://www.govtech.com/artificial-intelligence/report-new-orleans-startups-embracing-use-of-ai",
+              "title": "Report: New Orleans Startups Embracing Use of AI - GovTech",
+              "score": 0.6783488,
+              "published_date": "Fri, 24 Oct 2025 17:23:38 GMT",
+              "content": "# Report: New Orleans Startups Embracing Use of AI Those are some of the takeaways from the 2025 Greater New Orleans Startup Report, produced by Tulane University's A.B. Freeman School of Business. A separate report from the U.S. Chamber of Commerce supports Tulane's findings, ranking Louisiana seventh in the nation for adoption of generative AI, a category of artificial intelligence capable of creating text, images, audio, video and other original content. Tulane's report shows that high-growth startups — usually tech-based ventures that aim to scale quickly and disrupt industries — gained more from AI than traditional small businesses. The expansion of the startup report, and the creation of the Louisiana Innovation office — nicknamed \"LA.IO\" — are two of the latest efforts to formalize the state's entrepreneurial ecosystem and to use information to promote its growth.",
+              "raw_content": null
+            }
+          ],
+          "response_time": 0,
+          "request_id": "570f550e-78ea-4b02-aed7-65c710ef23ba"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Planner",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planner": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Editor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Editor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Editor": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e6060f26-5211-41eb-bd96-108dc8d5b9cd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ca9dc162493c9721672a5138ecf0d19bcb194b45ea3d41d210331a0d98e150e6"
+  },
+  "id": "gcSAFGspJvrbBp3H",
+  "tags": []
+}
